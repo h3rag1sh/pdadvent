@@ -1,0 +1,11 @@
+﻿node_modules/
+dist/
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+server.log
+server.err.log
+client.log
+client.err.log
+.DS_Store
