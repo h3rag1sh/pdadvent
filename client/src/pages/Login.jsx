@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import FxBackground from '../components/FxBackground';
 
 export default function Login() {
-  const [login, setLoginVal] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login: doLogin } = useAuth();
@@ -14,7 +14,7 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault(); setError('');
     try {
-      const res = await api.post('/auth/login', { phone: login, password });
+      const res = await api.post('/auth/login', { phone, password });
       doLogin(res.data.token, res.data.user);
       nav('/');
     } catch (err) { setError(err.response?.data?.error || 'Ошибка входа'); }
@@ -28,7 +28,7 @@ export default function Login() {
         <h1>Вход в PlayDay</h1>
         <p>Новогодний адвент и система лояльности клуба</p>
         <form className="form" onSubmit={submit}>
-          <div className="field"><label>Номер телефона</label><input type="tel" placeholder="+7 999 123-45-67" value={login} onChange={e=>setLoginVal(e.target.value)} autoComplete="tel" required /></div>
+          <div className="field"><label>Полный номер телефона</label><input type="tel" placeholder="+7 999 123-45-67" value={phone} onChange={e=>setPhone(e.target.value)} autoComplete="tel" required /></div>
           <div className="field"><label>Пароль</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required /></div>
           {error && <div className="error">{error}</div>}
           <button className="btn primary glow-pulse" type="submit">Войти</button>

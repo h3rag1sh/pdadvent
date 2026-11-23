@@ -4,7 +4,7 @@ import api from '../api/client';
 import FxBackground from '../components/FxBackground';
 
 export default function ForgotReset() {
-  const [identifier, setIdentifier] = useState('');
+  const [phone, setPhone] = useState('');
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
@@ -14,7 +14,7 @@ export default function ForgotReset() {
   const forgot = async (e) => {
     e.preventDefault(); setErr(''); setMsg('');
     try {
-      const payload = identifier.includes('@') ? { email: identifier } : { phone: identifier };
+      const payload = { phone };
       const res = await api.post('/auth/forgot', payload);
       setMsg(res.data.message || 'Готово');
       if (res.data.reset_token) setDemoToken(res.data.reset_token);
@@ -36,7 +36,7 @@ export default function ForgotReset() {
         <h1>Восстановление</h1>
         <p>Запросите токен и установите новый пароль</p>
         <form className="form" onSubmit={forgot}>
-          <div className="field"><label>Email или номер телефона</label><input value={identifier} onChange={e=>setIdentifier(e.target.value)} /></div>
+          <div className="field"><label>Полный номер телефона</label><input type="tel" placeholder="+7 999 123-45-67" value={phone} onChange={e=>setPhone(e.target.value)} autoComplete="tel" required /></div>
           <button className="btn" type="submit">Получить токен</button>
         </form>
         {demoToken && <div className="success" style={{marginTop:8}}>Токен (демо): <code className="inline">{demoToken}</code></div>}

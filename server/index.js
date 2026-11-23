@@ -79,12 +79,11 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.post('/api/auth/forgot', (req, res) => {
-  const { email, phone } = req.body || {};
-  const identifier = email || phone;
-  if (!identifier) return res.status(400).json({ error: 'Укажите email или номер телефона' });
-  const normPhone = normalizePhone(identifier);
-  const user = db.prepare('SELECT id FROM Users WHERE email = ? OR phone = ?')
-    .get(String(identifier).trim().toLowerCase(), normPhone || String(identifier).trim());
+  const { phone } = req.body || {};
+  if (!phone) return res.status(400).json({ error: 'Укажите номер телефона' });
+  const normPhone = normalizePhone(phone);
+  if (!normPhone || !/^\+\d{11,15}$/.test(normPhone)) return res.status(400).json({ error: 'Укажите полный номер телефона' });
+  const user = db.prepare('SELECT id FROM Users WHERE phone = ?').get(normPhone);
   if (user) {
     const token = crypto.randomBytes(16).toString('hex');
     const expires = new Date(Date.now() + 3600 * 1000).toISOString();
