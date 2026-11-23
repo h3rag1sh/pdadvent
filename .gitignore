@@ -8,4 +8,6 @@ server.log
 server.err.log
 client.log
 client.err.log
+*.log
+
 .DS_Store
