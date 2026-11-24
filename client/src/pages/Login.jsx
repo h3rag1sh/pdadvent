@@ -20,6 +20,12 @@ export default function Login() {
     } catch (err) { setError(err.response?.data?.error || 'Ошибка входа'); }
   };
 
+  const resetDemo = async () => {
+    setError('');
+    const res = await api.resetDemo();
+    setError(res.ok ? 'Демо-данные сброшены, попробуйте войти' : 'Сброс доступен только на демо-сайте');
+  };
+
   return (
     <div className="auth-wrap">
       <FxBackground />
@@ -32,6 +38,7 @@ export default function Login() {
           <div className="field"><label>Пароль</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required /></div>
           {error && <div className="error">{error}</div>}
           <button className="btn primary glow-pulse" type="submit">Войти</button>
+          <button className="btn" type="button" onClick={resetDemo} style={{marginTop:8}}>Сбросить демо-данные</button>
         </form>
         <div style={{marginTop:14, display:'flex', justifyContent:'space-between', fontSize:14}}>
           <Link to="/register">Регистрация</Link>

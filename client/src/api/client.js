@@ -50,6 +50,21 @@ function normalizePhone(p) {
 
 const validPhone = (v) => Boolean(v && /^\+\d{10,15}$/.test(v));
 
+function phoneDigits(v) {
+  return String(v || '').replace(/\D/g, '');
+}
+
+function findUserByPhone(db, phone) {
+  const exact = db.users.find((u) => u.phone === phone);
+  if (exact) return exact;
+  const digits = phoneDigits(phone);
+  if (!digits) return null;
+  const byDigits = db.users.find((u) => phoneDigits(u.phone) === digits);
+  if (byDigits) return byDigits;
+  const tail = digits.slice(-10);
+  return db.users.find((u) => phoneDigits(u.phone).slice(-10) === tail) || null;
+}
+
 function todayISO() {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -100,7 +115,13 @@ function loadDb() {
   if (raw) {
     try {
       const db = JSON.parse(raw);
-      const admin = db.users?.find((u) => u.role === 'superadmin');
+      const broken = !Array.isArray(db.users) || !Array.isArray(db.days) || !Array.isArray(db.items) || !Array.isArray(db.claims) || !Array.isArray(db.resets) || !db.tokens || typeof db.tokens !== 'object' || !db.settings || typeof db.settings !== 'object' || !Number.isFinite(db.nextUserId) || !Number.isFinite(db.nextClaimId) || !Number.isFinite(db.nextResetId);
+      if (broken) {
+        const fresh = seedDb();
+        saveDb(fresh);
+        return fresh;
+      }
+      const admin = db.users.find((u) => u.role === 'superadmin');
       if (admin && admin.phone !== DEFAULT_ADMIN_PHONE) {
         const conflict = db.users.some((u) => u.id !== admin.id && u.phone === DEFAULT_ADMIN_PHONE);
         if (!conflict) {
@@ -122,7 +143,7 @@ function saveDb(db) {
 
 function publicUser(user) {
   if (!user) return null;
-  const { password, ...rest } = user;
+  const { password: _password, ...rest } = user;
   return rest;
 }
 
@@ -192,9 +213,8 @@ function handleMock(method, path, data, params, db) {
     if (String(data.password).length < 4) throw fail(400, 'Пароль слишком короткий');
     const phone = normalizePhone(data.phone);
     if (!validPhone(phone)) throw fail(400, 'Укажите полный номер телефона');
-    if (db.users.some((u) => u.username.toLowerCase() === String(data.username).trim().toLowerCase() || u.phone === phone)) {
-      throw fail(400, 'Имя или номер телефона уже заняты');
-    }
+    const duplicate = db.users.find((u) => u.username.toLowerCase() === String(data.username).trim().toLowerCase()) || findUserByPhone(db, phone);
+    if (duplicate) throw fail(400, 'Имя или номер телефона уже заняты');
     const user = {
       id: db.nextUserId++,
       username: String(data.username).trim(),
@@ -216,7 +236,7 @@ function handleMock(method, path, data, params, db) {
     if (!raw || !data.password) throw fail(400, 'Введите номер телефона и пароль');
     const phone = normalizePhone(raw);
     if (!validPhone(phone)) throw fail(400, 'Укажите полный номер телефона');
-    let user = db.users.find((u) => u.phone === phone);
+    let user = findUserByPhone(db, phone);
     if (!user && phone === LEGACY_ADMIN_PHONE) user = db.users.find((u) => u.role === 'superadmin');
     if (!user || user.password !== String(data.password)) throw fail(401, 'Неверный номер телефона или пароль');
     const token = makeToken(db, user.id);
@@ -233,7 +253,7 @@ function handleMock(method, path, data, params, db) {
     if (!data.phone) throw fail(400, 'Укажите номер телефона');
     const phone = normalizePhone(data.phone);
     if (!validPhone(phone)) throw fail(400, 'Укажите полный номер телефона');
-    const user = db.users.find((u) => u.phone === phone);
+    const user = findUserByPhone(db, phone);
     if (!user) return { ok: true, message: 'Если аккаунт существует, инструкция отправлена' };
     const token = Math.random().toString(36).slice(2);
     db.resets.push({ id: db.nextResetId++, user_id: user.id, token, used: false, expires: new Date(Date.now() + 3600000).toISOString() });
@@ -500,7 +520,8 @@ function mockRequest(method, url, data = {}, params = {}) {
     const db = loadDb();
     return Promise.resolve(handleMock(method, path, data || {}, params || {}, db));
   } catch (err) {
-    return Promise.reject(err);
+    if (err?.response) return Promise.reject(err);
+    return Promise.reject(fail(500, err?.message || 'Ошибка демо-базы'));
   }
 }
 
@@ -515,7 +536,15 @@ const api = {
   get: (url, config = {}) => request('get', url, undefined, config.params),
   post: (url, data, config = {}) => request('post', url, data, config.params),
   put: (url, data, config = {}) => request('put', url, data, config.params),
-  delete: (url, config = {}) => request('delete', url, undefined, config.params)
+  delete: (url, config = {}) => request('delete', url, undefined, config.params),
+  resetDemo: () => {
+    if (!STATIC) return Promise.resolve({ ok: false });
+    localStorage.removeItem(DB_KEY);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    loadDb();
+    return Promise.resolve({ ok: true });
+  }
 };
 
 export default api;
