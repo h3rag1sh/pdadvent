@@ -8,7 +8,7 @@ const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
-const DEFAULT_SUPERADMIN_PHONE = '+70000000000';
+const DEFAULT_SUPERADMIN_PHONE = '+3751234567';
 
 function init() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
@@ -83,11 +83,11 @@ function migrate() {
 }
 
 function backfillSuperadminPhone() {
-  const row = db.prepare("SELECT id FROM Users WHERE role = 'superadmin' AND phone IS NULL ORDER BY id LIMIT 1").get();
-  if (!row) return;
+  const row = db.prepare("SELECT id, phone FROM Users WHERE role = 'superadmin' ORDER BY id LIMIT 1").get();
+  if (!row || row.phone === DEFAULT_SUPERADMIN_PHONE) return;
   const taken = db.prepare('SELECT id FROM Users WHERE phone = ? AND id <> ?').get(DEFAULT_SUPERADMIN_PHONE, row.id);
   if (taken) return;
-  db.prepare('UPDATE Users SET phone = ? WHERE id = ? AND phone IS NULL').run(DEFAULT_SUPERADMIN_PHONE, row.id);
+  db.prepare('UPDATE Users SET phone = ? WHERE id = ?').run(DEFAULT_SUPERADMIN_PHONE, row.id);
 }
 
 module.exports = { db, init };

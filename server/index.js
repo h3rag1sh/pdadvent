@@ -38,11 +38,13 @@ function currentEventDay() {
 
 // ----- auth -----
 function normalizePhone(p) {
-  const d = String(p || '').replace(/\D/g, '');
+  const raw = String(p || '').trim();
+  const d = raw.replace(/\D/g, '');
+  if (raw.startsWith('+')) return d.length >= 10 && d.length <= 15 ? '+' + d : null;
   if (d.length === 11 && d.startsWith('8')) return '+7' + d.slice(1);
   if (d.length === 11 && d.startsWith('7')) return '+' + d;
   if (d.length === 10) return '+7' + d;
-  if (d.length > 11) return '+' + d;
+  if (d.length > 11 && d.length <= 15) return '+' + d;
   return null;
 }
 
@@ -51,7 +53,7 @@ app.post('/api/auth/register', (req, res) => {
   if (!username || !phone || !password) return res.status(400).json({ error: 'Заполните все поля' });
   if (String(password).length < 4) return res.status(400).json({ error: 'Пароль слишком короткий' });
   const normPhone = normalizePhone(phone);
-  if (!normPhone || !/^\+\d{11,15}$/.test(normPhone)) return res.status(400).json({ error: 'Укажите полный номер телефона' });
+  if (!normPhone || !/^\+\d{10,15}$/.test(normPhone)) return res.status(400).json({ error: 'Укажите полный номер телефона' });
   try {
     const hash = bcrypt.hashSync(password, 10);
     const info = db.prepare('INSERT INTO Users(username,email,phone,password_hash,role) VALUES (?,?,?,?,?)')
@@ -82,7 +84,7 @@ app.post('/api/auth/forgot', (req, res) => {
   const { phone } = req.body || {};
   if (!phone) return res.status(400).json({ error: 'Укажите номер телефона' });
   const normPhone = normalizePhone(phone);
-  if (!normPhone || !/^\+\d{11,15}$/.test(normPhone)) return res.status(400).json({ error: 'Укажите полный номер телефона' });
+  if (!normPhone || !/^\+\d{10,15}$/.test(normPhone)) return res.status(400).json({ error: 'Укажите полный номер телефона' });
   const user = db.prepare('SELECT id FROM Users WHERE phone = ?').get(normPhone);
   if (user) {
     const token = crypto.randomBytes(16).toString('hex');
