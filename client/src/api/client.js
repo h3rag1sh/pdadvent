@@ -122,13 +122,18 @@ function loadDb() {
         return fresh;
       }
       const admin = db.users.find((u) => u.role === 'superadmin');
+      db.users = admin ? [admin] : seedDb().users;
+      const adminId = db.users[0].id;
+      db.claims = Array.isArray(db.claims) ? db.claims.filter((c) => c.user_id === adminId) : [];
+      db.resets = Array.isArray(db.resets) ? db.resets.filter((r) => r.user_id === adminId) : [];
+      db.tokens = Object.fromEntries(Object.entries(db.tokens).filter(([, userId]) => userId === adminId));
+      db.nextUserId = adminId + 1;
+      db.nextClaimId = Math.max(db.nextClaimId, ...db.claims.map((c) => c.id), 0) + 1;
+      db.nextResetId = Math.max(db.nextResetId, ...db.resets.map((r) => r.id), 0) + 1;
       if (admin && admin.phone !== DEFAULT_ADMIN_PHONE) {
-        const conflict = db.users.some((u) => u.id !== admin.id && u.phone === DEFAULT_ADMIN_PHONE);
-        if (!conflict) {
-          admin.phone = DEFAULT_ADMIN_PHONE;
-          saveDb(db);
-        }
+        admin.phone = DEFAULT_ADMIN_PHONE;
       }
+      saveDb(db);
       return db;
     } catch {}
   }
