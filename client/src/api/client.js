@@ -18,7 +18,7 @@ http.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (window.location.pathname !== `${BASE_URL}login`) window.location.href = `${BASE_URL}login`;
+      if (window.location.hash !== '#/login') window.location.href = `${BASE_URL}#/login`;
     }
     return Promise.reject(err);
   }
@@ -30,7 +30,7 @@ function fail(status, error) {
   if (status === 401 && STATIC) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    if (window.location.pathname !== `${BASE_URL}login`) window.location.href = `${BASE_URL}login`;
+    if (window.location.hash !== '#/login') window.location.href = `${BASE_URL}#/login`;
   }
   return err;
 }
