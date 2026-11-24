@@ -3,6 +3,8 @@ import axios from 'axios';
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const STATIC = import.meta.env.VITE_STATIC === '1' || (typeof window !== 'undefined' && window.location.hostname.endsWith('github.io'));
 const DB_KEY = 'playday_demo_db_v1';
+const DEFAULT_ADMIN_PHONE = '+3751234567';
+const LEGACY_ADMIN_PHONE = '+70000000000';
 
 const http = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
 
@@ -58,7 +60,7 @@ function seedDb() {
     id: 1,
     username: 'superadmin',
     email: 'superadmin@club.local',
-    phone: '+3751234567',
+    phone: DEFAULT_ADMIN_PHONE,
     password: 'superadmin',
     role: 'superadmin',
     bonus_balance: 0,
@@ -96,7 +98,18 @@ function seedDb() {
 function loadDb() {
   const raw = localStorage.getItem(DB_KEY);
   if (raw) {
-    try { return JSON.parse(raw); } catch {}
+    try {
+      const db = JSON.parse(raw);
+      const admin = db.users?.find((u) => u.role === 'superadmin');
+      if (admin && admin.phone !== DEFAULT_ADMIN_PHONE) {
+        const conflict = db.users.some((u) => u.id !== admin.id && u.phone === DEFAULT_ADMIN_PHONE);
+        if (!conflict) {
+          admin.phone = DEFAULT_ADMIN_PHONE;
+          saveDb(db);
+        }
+      }
+      return db;
+    } catch {}
   }
   const db = seedDb();
   saveDb(db);
@@ -203,7 +216,8 @@ function handleMock(method, path, data, params, db) {
     if (!raw || !data.password) throw fail(400, 'Введите номер телефона и пароль');
     const phone = normalizePhone(raw);
     if (!validPhone(phone)) throw fail(400, 'Укажите полный номер телефона');
-    const user = db.users.find((u) => u.phone === phone);
+    let user = db.users.find((u) => u.phone === phone);
+    if (!user && phone === LEGACY_ADMIN_PHONE) user = db.users.find((u) => u.role === 'superadmin');
     if (!user || user.password !== String(data.password)) throw fail(401, 'Неверный номер телефона или пароль');
     const token = makeToken(db, user.id);
     saveDb(db);
