@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PlayDay</title>
+    <script>
+      var base = '/pdadvent/';
+      var route = location.pathname.indexOf(base) === 0 ? location.pathname.slice(base.length) : '';
+      location.replace(base + '#/' + route.replace(/^\/+|\/+$/g, ''));
+    </script>
+  </head>
+  <body>Переход...</body>
+</html>
